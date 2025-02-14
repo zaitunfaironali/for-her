@@ -1,77 +1,121 @@
-var c = document.getElementById('alx');
+'use strict';
 
-  var b = document.body;
-  var a = c.getContext('2d');
+const maxScale         = 3;
+const scaleStep        = .001;
+const width            = 400;
+const height           = 400;
+const heartsCount      = 20;
+const newHeartInterval = 250;
+const colourList       = [
+  "#9925fb",
+  "#cb27fc",
+  "#fd28fc",
+  "#22cccb",
+  "#1aa5cb",
+  "#137dca"
+];
 
+function drawHeart(ctx, fromx, fromy,lw,hlen,color) {
+  var x = fromx;
+  var y = fromy;
+  var width = lw ;
+  var height = hlen;
 
-  e = [];
-  h = [];
-  WIDTH = c.width = innerWidth;
-  HEIGHT = c.height = innerHeight;
-  v = 32 + 16 + 8;
-  R = Math.random;
-  C = Math.cos;
-  Y = 6.3;
+  ctx.save();
+  ctx.beginPath();
+  var topCurveHeight = height * 0.3;
+  ctx.moveTo(x, y + topCurveHeight);
+  ctx.bezierCurveTo(
+    x, y, 
+    x - width / 2, y, 
+    x - width / 2, y + topCurveHeight
+  );
 
-  for (i = 0; i < Y ; i += 0.2) 
-    h.push([WIDTH / 2  + 210 * Math.pow(Math.sin(i), 3), 
-      HEIGHT / 2  + 13 * -(15 * C(i) - 5 * C(2 * i) - 2 * C(3 * i) - C(4 * i))]);
+  ctx.bezierCurveTo(
+    x - width / 2, y + (height + topCurveHeight) / 2, 
+    x, y + (height + topCurveHeight) / 2, 
+    x, y + height
+  );
 
-  for (i = 0; i < Y  ; i += 0.4) 
-    h.push([WIDTH / 2  + 150 * Math.pow(Math.sin(i), 3), 
-      HEIGHT / 2  + 9 * -(15 * C(i) - 5 * C(2 * i) - 2 * C(3 * i) - C(4 * i))]);
+  ctx.bezierCurveTo(
+    x, y + (height + topCurveHeight) / 2, 
+    x + width / 2, y + (height + topCurveHeight) / 2, 
+    x + width / 2, y + topCurveHeight
+  );
 
-  for (i = 0; i < Y  ; i += 0.8) 
-    h.push([WIDTH / 2  + 90 * Math.pow(Math.sin(i), 3), 
-      HEIGHT / 2  + 5 * -(15 * C(i) - 5 * C(2 * i) - 2 * C(3 * i) - C(4 * i))]);
+  ctx.bezierCurveTo(
+    x + width / 2, y, 
+    x, y, 
+    x, y + topCurveHeight
+  );
 
-  for (i = 0; i < v;) {
-      x = R() * WIDTH;
-      y = R() * HEIGHT;
-      H = 80 * (i / v) + Math.random * 100;
-      S = 40 * R() + 60;
-      B = 60 * R() + 20;
-      f = [];
-      for (k = 0; k < v;) f[k++] = {
-          x: x,
-          y: y,
-          X: 0,
-          Y: 0,
-          R: 1 - k / v + 1,
-          S: R() + 1,
-          q: ~~(R() * v),
-          D: 2 * (i % 2) - 1,
-          F: 0.2 * R() + 0.7,
-          f: "hsla(" + ~~H + "," + ~~S + "%," + ~~B + "%,.1)"
-      };
-      e[i++] = f
+  ctx.closePath();
+  ctx.fillStyle = color;
+  ctx.fill();
+  ctx.restore();
+}
+
+class Heart {
+  constructor(scale = 0, colour = 'red') {
+    this.s = scale;
+    this.c = colour;
+    this.x = width/2;
+    this.h = height * scale; 
+    this.y = height/2 - (this.h !== 0 ? this.h / 2 : 0);
+    this.i = scaleStep;
   }
-
-  function path(d) {
-      a.fillStyle = d.f;
-      a.beginPath();
-      a.arc(d.x, d.y, d.R, 0, Y, 1);
-      a.closePath();
-      a.fill()
+  
+  step() {
+    this.s += this.i;  
+    this.i += 0.00005; 
+    this.h = height * this.s; 
+    this.y = height / 2 - (this.h !== 0 ? this.h / 2 : 0); 
   }
-  setInterval(function () {
-      a.fillStyle = "rgba(0,0,0,.2)";
-      a.fillRect(0, 0, WIDTH, HEIGHT);
-      for (i = v; i--;) {
-          f = e[i];
-          u = f[0];
-          q = h[u.q];
-          D = u.x - q[0];
-          E = u.y - q[1];
-          G = Math.sqrt(D * D + E * E);
-          10 > G && (0.95 < R() ? u.q = ~~ (R() * v) : (0.99 < R() && (u.D *= -1), u.q += u.D, u.q %= v, 0 > u.q && (u.q += v)));
-          u.X += -D / G * u.S;
-          u.Y += -E / G * u.S;
-          u.x += u.X;
-          u.y += u.Y;
-          path(u);
-          u.X *= u.F;
-          u.Y *= u.F;
-          for (k = 0; k < v - 1;) T = f[k], N = f[++k], N.x -= 0.7 * (N.x - T.x), N.y -= 0.7 * (N.y - T.y), path(N)
-      }
-  }, 25);
+  
+  draw(context) {
+    if (this.s === 0)
+      return;
+    drawHeart(context, this.x, this.y, this.h, this.h, this.c);
+  }
+}
+
+class ColourWheel {
+  constructor(colors) {
+    this.i = 0;
+    this.c = colors;
+  }
+  
+  next() {
+    let c = this.c[this.i++];
+    this.i %= this.c.length;
+    return c;
+  }
+}
+
+window.addEventListener('load', function() {
+  var canvas  = document.getElementById("animation"),
+      context = canvas.getContext("2d"),
+      colours = new ColourWheel(colourList),
+      hearts  = [];
+  
+  context.fillStyle = 'rgba(38, 38, 38, 1)';
+  context.fillRect(0, 0, width, height);
+  
+  let lastTime = 0;
+  +(function animation(time) {
+    requestAnimationFrame(animation);
+    
+    for (let h of hearts) h.step();
+    
+    hearts = hearts.filter(h => h.s <= maxScale * 1.5);
+    
+    if (time - lastTime >= newHeartInterval) {
+      lastTime = time;
+      hearts.push(new Heart(0, colours.next()));
+    }
+    
+    hearts.sort((a, b) => b.s - a.s);
+    
+    for (let h of hearts) h.draw(context);
+  }());
+});
